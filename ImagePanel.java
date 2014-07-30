@@ -5,18 +5,19 @@ import java.awt.event.*;
 import java.awt.image.*;
 
 public class ImagePanel extends JPanel implements ComponentListener {
-	PixelGridGenerator pixelGenerator;
-	private int width = 640;
-	private int height = 480;
+	private PixelGridGenerator pixelGenerator;
+	private int width;
+	private int height;
 	
 	
-	public ImagePanel() {
+	public ImagePanel(int startWidth, int startHeight) {
 		super();
+		width = startWidth;
+		height = startHeight;
 		pixelGenerator = new ZAxisColorGenerator();
 		addComponentListener(this);
 		updateImage();
-	}
-	
+	}	
 
 	private void updateImage() {
 		int[][] pixelValues = pixelGenerator.generate(width, height);
@@ -25,7 +26,6 @@ public class ImagePanel extends JPanel implements ComponentListener {
 	}
 	
 	private BufferedImage createImage(int[][] pixelValues) {
-		//int width = pixelValues[0].length;
 		int[] pixelArray = new int[pixelValues.length * width];
 		for (int i = 0; i < pixelValues.length; i++) {
 			for (int j = 0; j < width; j++) 
@@ -41,7 +41,6 @@ public class ImagePanel extends JPanel implements ComponentListener {
 		JLabel picture = new JLabel(new ImageIcon(image));
 		removeAll();
 		add(picture);
-		//repaint();
 	}
 	
 	/* Implementation of the ComponentListener interface */
@@ -50,6 +49,7 @@ public class ImagePanel extends JPanel implements ComponentListener {
 	public void componentResized(ComponentEvent e) { 		
 		width = this.getSize().width;
 		height = this.getSize().height;
-		updateImage(); }
+		updateImage(); 
+	}
 	public void componentShown(ComponentEvent e) { }	
 }

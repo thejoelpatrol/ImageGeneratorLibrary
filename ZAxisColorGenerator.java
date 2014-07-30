@@ -13,18 +13,13 @@ public class ZAxisColorGenerator extends PixelGridGenerator {
 		int upperBoundHeight = height/2 + height%2;
 		for (int y = lowerBoundHeight; y < upperBoundHeight - 1; y++) {
 			for (int x = lowerBoundWidth; x < upperBoundWidth - 1; x++) {
-				//double z = (double)x /(double)y + (double)y/(double)x;
 				double xf = x;
 				double z = 0.2*xf*(double)y + 0.01*xf*xf*xf;
 				z *= BIAS;
 				int i = y - lowerBoundHeight;
 				int j = x - lowerBoundWidth;
  				grid[i][j] = (int)Math.abs(z) & alphaMask; 
- 				
- 				//System.out.print(grid[i][j] + "   ");
- 				//System.out.format("%.1f\t", z);
-			}
-			//System.out.print('\n');
+ 			}
 		}	
 		return grid;
 	}
