@@ -27,7 +27,6 @@ public class ImagePanel extends JPanel implements ComponentListener {
 	}
 	
 	private BufferedImage createImage(int[][] pixelValues) {
-		//int width = pixelValues[0].length;
 		int[] pixelArray = new int[pixelValues.length * width];
 		for (int i = 0; i < pixelValues.length; i++) {
 			for (int j = 0; j < width; j++) 
