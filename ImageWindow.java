@@ -3,7 +3,7 @@ import javax.swing.JFrame;
 public class ImageWindow {
 	private static final int DEFAULT_WIDTH = 640;
 	private static final int DEFAULT_HEIGHT = 480;
-	private static JFrame frame;
+	private JFrame frame;
 	private ImagePanel panel;
 	
 	public ImageWindow() {
@@ -12,12 +12,13 @@ public class ImageWindow {
 		frame.setSize(DEFAULT_WIDTH, DEFAULT_HEIGHT);
 		frame.setVisible(true);
 		panel = new ImagePanel(DEFAULT_WIDTH, DEFAULT_HEIGHT);
-		frame.getContentPane().add(panel);
+		frame.add(panel);
+		frame.pack();
 		frame.validate();
 	}
 	
+
 	public static void main (String args[]) {
 		ImageWindow window = new ImageWindow();
-		frame.validate();
 	}
 }
