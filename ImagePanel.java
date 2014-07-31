@@ -10,11 +10,11 @@ public class ImagePanel extends JPanel implements ComponentListener {
 	private int height;
 	
 	
-	public ImagePanel(int startWidth, int startHeight) {
+	public ImagePanel(int startWidth, int startHeight, PixelGridGenerator imageGenerator) {
 		super();
 		width = startWidth;
 		height = startHeight;
-		pixelGenerator = new ZAxisColorGenerator();
+		pixelGenerator = imageGenerator;
 		addComponentListener(this);
 		updateImage();
 	}

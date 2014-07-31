@@ -15,7 +15,8 @@ public abstract class PixelGridGenerator {
 	 * Generates a grid of ints according to some algorithm defined by function(), chosen by the implementation, 
 	 * which are suitable for use as RGB color values with no alpha (fully opaque). 
 	 * generateZ() provides a base on which generate() may be implemented, if the algorithm
-	 * involves calculating the height of a surface (the Z coordinates).
+	 * involves calculating the height of a surface (the Z coordinates). The origin is at the center
+	 * of the grid, and each cell contains the Z value calculated by function() at that coordinate.
 	 * @param width The width of the desired grid of ints
 	 * @param height The height of the desired grid of ints
 	 * @return A (width)x(height) 2D array of ints that are suitable for use as RGB color values
@@ -37,7 +38,8 @@ public abstract class PixelGridGenerator {
 	}	
 	
 	/**
-	 * Generates the Z value for an X and Y value, according to the implementation's algorithm
+	 * Generates the Z value for an X and Y value, according to the implementation's algorithm. If
+	 * using generateZ() to generate a surface, this function is the actual function z(x,y) = ...
 	 * @param x the X coordinate for which Z is desired
 	 * @param y the Y coordinate for which Z is desired
 	 * @return the Z coordinate
