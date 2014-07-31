@@ -1,7 +1,8 @@
+package com.laserscorpion.ImageGeneratorLibrary;
 
 public abstract class PixelGridGenerator {
 	private static final int alphaMask = 0x70FFFFFF;
-
+		
 	/**
 	 * Generates a grid of ints according to some algorithm, chosen by the implementation, 
 	 * which are suitable for use as RGB color values with no alpha (fully opaque).
@@ -31,7 +32,7 @@ public abstract class PixelGridGenerator {
 			for (int x = lowerBoundWidth; x < upperBoundWidth ; x++) {
 				int i = y - lowerBoundHeight;
 				int j = x - lowerBoundWidth;
-				grid[i][j] = function(x, y) & alphaMask;
+				grid[i][j] = Math.abs(function(x, y)) & alphaMask;
  			}
 		}	
 		return grid;

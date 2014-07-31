@@ -1,3 +1,5 @@
+package com.laserscorpion.ImageGeneratorLibrary;
+
 import javax.swing.JFrame;
 
 public class ImageWindow {
