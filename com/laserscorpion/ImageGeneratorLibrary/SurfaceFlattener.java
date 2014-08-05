@@ -4,6 +4,7 @@ import uk.co.cogitolearning.cogpar.*;
 
 public class SurfaceFlattener extends PixelGridGenerator {
 	ExpressionNode expressionTree;
+	int[][] grid; 
 	
 	public SurfaceFlattener(String function) {
 		Parser parser = new Parser();
@@ -21,11 +22,10 @@ public class SurfaceFlattener extends PixelGridGenerator {
 	}
 
 	/**
-	 * Generates a grid of ints according to some algorithm defined by function(), chosen by the implementation, 
-	 * which are suitable for use as RGB color values with no alpha (fully opaque). 
-	 * generateZ() provides a base on which generate() may be implemented, if the algorithm
-	 * involves calculating the height of a surface (the Z coordinates). The origin is at the center
-	 * of the grid, and each cell contains the Z value calculated by function() at that coordinate.
+	 * Generates a grid of ints according to some function set by the constructor, 
+	 * which are suitable for use as RGB color values, including alpha, which is generally ignored
+	 * by the actual image. 
+	 * The origin is at the center of the grid, and each cell contains the Z value calculated by function() at that coordinate.
 	 * @param width The width of the desired grid of ints
 	 * @param height The height of the desired grid of ints
 	 * @return A (width)x(height) 2D array of ints that are suitable for use as RGB color values
