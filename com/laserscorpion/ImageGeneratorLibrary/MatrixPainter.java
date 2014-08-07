@@ -11,5 +11,9 @@ public class MatrixPainter extends PixelGridGenerator {
 		// TODO Auto-generated method stub
 		return null;
 	}
-
+	
+	@Override
+	public String getName() {
+		return "";
+	}
 }

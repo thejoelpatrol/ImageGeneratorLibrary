@@ -16,15 +16,18 @@ public class ImagePanel extends JPanel implements ComponentListener {
 		width = startWidth;
 		height = startHeight;
 		pixelGenerator = imageGenerator;
-		addComponentListener(this);
 		updateImage();
+		addComponentListener(this);
 	}
 	
 
 	private void updateImage() {
 		int[][] pixelValues = pixelGenerator.generate(width, height);
 		BufferedImage image = createImage(pixelValues);
-		paintImage(image);
+		JLabel picture = new JLabel(new ImageIcon(image));
+		removeAll();
+		add(picture);
+		validate();
 	}
 	
 	private BufferedImage createImage(int[][] pixelValues) {
@@ -39,11 +42,7 @@ public class ImagePanel extends JPanel implements ComponentListener {
 		return image;
 	}
 	
-	private void paintImage(BufferedImage image) {
-		JLabel picture = new JLabel(new ImageIcon(image));
-		removeAll();
-		add(picture);
-	}
+
 	
 	/* Implementation of the ComponentListener interface */
 	public void componentHidden(ComponentEvent e) { }
@@ -53,5 +52,9 @@ public class ImagePanel extends JPanel implements ComponentListener {
 		height = this.getSize().height;
 		updateImage(); 
 	}
-	public void componentShown(ComponentEvent e) { }	
+	public void componentShown(ComponentEvent e) {
+		/*width = this.getSize().width;
+		height = this.getSize().height;
+		updateImage();*/
+	}	
 }

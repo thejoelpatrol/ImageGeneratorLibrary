@@ -12,6 +12,6 @@ public abstract class PixelGridGenerator {
 	 */
 	public abstract int[][] generate(int width, int height);
 
-
+	public abstract String getName();
 
 }

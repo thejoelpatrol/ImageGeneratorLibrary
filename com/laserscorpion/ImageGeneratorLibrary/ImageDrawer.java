@@ -3,7 +3,10 @@ package com.laserscorpion.ImageGeneratorLibrary;
 public class ImageDrawer {
 	public static void main (String[] args) {
 		PixelGridGenerator imageGenerator;
-		if (args[0].equals("-z") || args[0].equals("--surface")) 
+		if (args.length == 0) {
+			printUsageAndExit();
+			imageGenerator = new SurfaceFlattener("0"); // to silence the compiler; never executed
+		} else if (args[0].equals("-z") || args[0].equals("--surface")) 
 			imageGenerator = new SurfaceFlattener(args[1]);
 		else if (args[0].equals("-m") || args[0].equals("--matrix"))
 			imageGenerator = new MatrixPainter(args);

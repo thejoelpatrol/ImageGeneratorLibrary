@@ -3,10 +3,18 @@ package com.laserscorpion.ImageGeneratorLibrary;
 import uk.co.cogitolearning.cogpar.*;
 
 public class SurfaceFlattener extends PixelGridGenerator {
+	String surface;
 	ExpressionNode expressionTree;
-	int[][] grid; 
+	int[][] oldGrid; 
 	
+	/**
+	 * The only constructor. Must supply the function to graph.
+	 * @param function The function z(x,y) = ... that defines the surface. Omit the z = , just include the 
+	 * polynomial in terms of x and y. Multiplied terms need a *, e.g. 5*x^2, not 5x^2 or 5(x^2). 
+	 * Parenthesized terms should be within double quotes. 
+	 */
 	public SurfaceFlattener(String function) {
+		surface = function;
 		Parser parser = new Parser();
 		try {
 			expressionTree = parser.parse(function.toLowerCase());
@@ -17,21 +25,111 @@ public class SurfaceFlattener extends PixelGridGenerator {
 	}
 	
 	@Override
-	public int[][] generate(int width, int height) {
-		return generateZ(width, height);
+	public String getName() {
+		return surface;
 	}
-
+	
+	@Override
+	public int[][] generate(int width, int height) {
+		int[][] grid;
+		if (oldGrid == null) {
+			grid = generateFreshGrid(width, height); // slow
+		} else {
+			grid = new int[height][width];
+			int oldWidth = oldGrid[0].length;
+			int oldHeight = oldGrid.length;
+			if (width >= oldWidth && height >= oldHeight)
+				expandOldGrid(grid); // faster than redrawing from scratch
+			else subsetOldGrid(grid); // fast			
+		}
+		oldGrid = grid;
+		return grid;
+	}
+	
+	private void expandOldGrid(int[][] grid) {
+		int oldHeight = oldGrid.length;
+		int oldWidth = oldGrid[0].length;
+		int newRowsAbove = (grid.length - oldHeight) / 2;
+		//int newRowsBelow = grid.length - oldHeight - newRowsAbove;
+		int newColsLeft = (grid[0].length - oldWidth) / 2;
+		//int newColsRight = grid[0].length - oldWidth - newColsLeft;
+		
+		generateRegion(0, 0, newRowsAbove, grid[0].length, grid);
+		generateRegion(newRowsAbove, 0, newRowsAbove + oldHeight, newColsLeft, grid);
+		copyOldGrid(newRowsAbove, newColsLeft, grid);
+		generateRegion(newRowsAbove, newColsLeft + oldWidth, newRowsAbove + oldHeight, grid[0].length, grid);
+		generateRegion(newRowsAbove + oldHeight, 0, grid.length, grid[0].length, grid);
+	}
+	
+	private void copyOldGrid(int startRow, int startCol, int[][] grid) {
+		for (int i = 0; i < oldGrid.length; i++) {
+			for (int j = 0; j < oldGrid[0].length; j++) {
+				grid[i + startRow][j + startCol] = oldGrid[i][j];
+			}
+		}
+	}
+	
+	private void generateRegion(int startRow, int startCol, int endRow, int endCol, int[][] grid) {
+		for (int i = startRow; i < endRow; i++) {
+			for (int j = startCol; j < endCol; j++) {
+				int x = j - grid[0].length/2;
+				int y = i - grid.length/2;
+				grid[i][j] = function(x, y);
+			}
+		}
+	}
+	
+	private void subsetOldGrid(int[][] grid) {
+		int newRows = grid.length;
+		int newCols = grid[0].length;
+		int oldRows = oldGrid.length;
+		int oldCols = oldGrid[0].length;
+		if (newRows < oldRows) {
+			int trimmedRows = oldRows - newRows;
+			int trimmedTop = trimmedRows / 2;
+			if (newCols < oldCols) {
+				int trimmedCols = oldCols - newCols;
+				for (int i = 0; i < newRows; i++) {
+					for (int j = 0; j < newCols; j++) {
+						grid[i][j] = oldGrid[trimmedTop + i][trimmedCols/2 + j];
+					}
+				}
+			} else {
+				int addedCols = newCols - oldCols;
+				int addedLeft = addedCols / 2;
+				generateRegion(0, 0, newRows, addedLeft, grid);
+				for (int i = 0; i < newRows; i++) {
+					for (int j = addedLeft; j < addedLeft + oldCols; j++) {
+						grid[i][j] = oldGrid[trimmedTop + i][j - addedLeft];
+					}
+				}
+				generateRegion(0, addedLeft + oldCols, newRows, newCols, grid);	
+			}
+		} else {
+			int addedRows = newRows - oldRows;
+			int addedTop = addedRows / 2;
+			if (newCols < oldCols) {
+				int trimmedLeft = (oldCols - newCols) / 2;
+				generateRegion(0, 0, addedTop, newCols, grid);
+				for (int i = addedTop; i < addedTop + oldRows; i++) {
+					for (int j = 0; j < newCols; j++) {
+						grid[i][j] = oldGrid[i - addedTop][j + trimmedLeft];
+					}
+				}				
+				generateRegion(addedTop + oldRows, 0, newRows, newCols, grid);
+			} else {
+				System.out.println("um.");
+			}
+		}
+		
+	}
+	
 	/**
-	 * Generates a grid of ints according to some function set by the constructor, 
-	 * which are suitable for use as RGB color values, including alpha, which is generally ignored
-	 * by the actual image. 
-	 * The origin is at the center of the grid, and each cell contains the Z value calculated by function() at that coordinate.
-	 * @param width The width of the desired grid of ints
-	 * @param height The height of the desired grid of ints
-	 * @return A (width)x(height) 2D array of ints that are suitable for use as RGB color values
+	 * Creates a width x height matrix of ints, puts the origin at the center of the matrix, and fills
+	 * in the values for each (x,y) point according to function()
 	 */
-	private int[][] generateZ(int width, int height) {
-		int[][] grid = new int [height][width];
+	private int[][] generateFreshGrid(int width, int height) {
+		int[][] grid = new int[height][width];
 		int lowerBoundWidth = -width / 2;
 		int upperBoundWidth = width/2 + width%2;
 		int lowerBoundHeight = -height / 2;
@@ -40,11 +138,14 @@ public class SurfaceFlattener extends PixelGridGenerator {
 			for (int x = lowerBoundWidth; x < upperBoundWidth ; x++) {
 				int i = y - lowerBoundHeight;
 				int j = x - lowerBoundWidth;
-				grid[i][j] = function(x, y) ;//& alphaMask;
+				grid[i][j] = function(x, y) ;
  			}
 		}	
+		oldGrid = grid;
 		return grid;
-	}	
+	}
+	
+	
 	
 	/**
 	 * Generates the Z value for an X and Y value, according to the function supplied to the constructor.
