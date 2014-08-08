@@ -3,7 +3,7 @@ package com.laserscorpion.ImageGeneratorLibrary;
 import uk.co.cogitolearning.cogpar.*;
 
 public class SurfaceFlattener extends PixelGridGenerator {
-	String surface;
+	String surfaceExpression;
 	ExpressionNode expressionTree;
 	int[][] oldGrid; 
 	
@@ -14,7 +14,7 @@ public class SurfaceFlattener extends PixelGridGenerator {
 	 * Parenthesized terms should be within double quotes. 
 	 */
 	public SurfaceFlattener(String function) {
-		surface = function;
+		surfaceExpression = function;
 		Parser parser = new Parser();
 		try {
 			expressionTree = parser.parse(function.toLowerCase());
@@ -26,14 +26,15 @@ public class SurfaceFlattener extends PixelGridGenerator {
 	
 	@Override
 	public String getName() {
-		return surface;
+		return surfaceExpression;
 	}
 	
 	@Override
 	public int[][] generate(int width, int height) {
 		int[][] grid;
 		if (oldGrid == null) {
-			grid = generateFreshGrid(width, height); // slow
+			grid = new int[height][width];
+			generateRegion(0, 0, height, width, grid); // slow
 		} else {
 			grid = new int[height][width];
 			int oldWidth = oldGrid[0].length;
@@ -49,21 +50,24 @@ public class SurfaceFlattener extends PixelGridGenerator {
 	private void expandOldGrid(int[][] grid) {
 		int oldHeight = oldGrid.length;
 		int oldWidth = oldGrid[0].length;
-		int newRowsAbove = (grid.length - oldHeight) / 2;
-		//int newRowsBelow = grid.length - oldHeight - newRowsAbove;
-		int newColsLeft = (grid[0].length - oldWidth) / 2;
-		//int newColsRight = grid[0].length - oldWidth - newColsLeft;
+		int newHeight = grid.length;
+		int newWidth = grid[0].length;
+		int newRowsAbove = (newHeight - oldHeight) / 2 + balanceRows(oldHeight, newHeight);
+		int newColsLeft = (grid[0].length - oldWidth) / 2  + balanceColumns(oldWidth, newWidth); 
 		
-		generateRegion(0, 0, newRowsAbove, grid[0].length, grid);
-		generateRegion(newRowsAbove, 0, newRowsAbove + oldHeight, newColsLeft, grid);
+		generateRegion(0, 0, newRowsAbove, newWidth, grid);
+		generateRegion(newRowsAbove, 0, newRowsAbove + oldHeight, newWidth, grid);
 		copyOldGrid(newRowsAbove, newColsLeft, grid);
-		generateRegion(newRowsAbove, newColsLeft + oldWidth, newRowsAbove + oldHeight, grid[0].length, grid);
-		generateRegion(newRowsAbove + oldHeight, 0, grid.length, grid[0].length, grid);
+		generateRegion(newRowsAbove, newColsLeft + oldWidth, newRowsAbove + oldHeight, newWidth, grid);
+		generateRegion(newRowsAbove + oldHeight, 0, newHeight, newWidth, grid);
 	}
 	
 	private void copyOldGrid(int startRow, int startCol, int[][] grid) {
 		for (int i = 0; i < oldGrid.length; i++) {
 			for (int j = 0; j < oldGrid[0].length; j++) {
+				if (i + startRow < 0) System.out.println("i: " + i + " startRow: "  + startRow);
+				if (j + startCol < 0) System.out.println("j: " + j + " startCol: "  + startCol);
+
 				grid[i + startRow][j + startCol] = oldGrid[i][j];
 			}
 		}
@@ -80,49 +84,85 @@ public class SurfaceFlattener extends PixelGridGenerator {
 	}
 	
 	private void subsetOldGrid(int[][] grid) {
-		int newRows = grid.length;
-		int newCols = grid[0].length;
-		int oldRows = oldGrid.length;
-		int oldCols = oldGrid[0].length;
-		if (newRows < oldRows) {
-			int trimmedRows = oldRows - newRows;
-			int trimmedTop = trimmedRows / 2;
-			if (newCols < oldCols) {
-				int trimmedCols = oldCols - newCols;
-				for (int i = 0; i < newRows; i++) {
-					for (int j = 0; j < newCols; j++) {
-						grid[i][j] = oldGrid[trimmedTop + i][trimmedCols/2 + j];
+		int newHeight = grid.length;
+		int newWidth = grid[0].length;
+		int oldHeight = oldGrid.length;
+		int oldWidth = oldGrid[0].length;
+		if (newHeight < oldHeight) {
+			int trimmedRows = oldHeight - newHeight;
+			int trimmedTop = trimmedRows / 2 + balanceRows(oldHeight, newHeight);
+			if (newWidth < oldWidth) {
+				int trimmedLeft = (oldWidth - newWidth) / 2 + balanceColumns(oldWidth, newWidth);
+				for (int i = 0; i < newHeight; i++) {
+					for (int j = 0; j < newWidth; j++) {
+						grid[i][j] = oldGrid[trimmedTop + i][trimmedLeft + j];
 					}
 				}
 			} else {
-				int addedCols = newCols - oldCols;
-				int addedLeft = addedCols / 2;
-				generateRegion(0, 0, newRows, addedLeft, grid);
-				for (int i = 0; i < newRows; i++) {
-					for (int j = addedLeft; j < addedLeft + oldCols; j++) {
+				int addedCols = newWidth - oldWidth;
+				int addedLeft = addedCols / 2 + balanceColumns(oldWidth, newWidth);
+				generateRegion(0, 0, newHeight, addedLeft, grid);
+				for (int i = 0; i < newHeight; i++) {
+					for (int j = addedLeft; j < addedLeft + oldWidth; j++) {
 						grid[i][j] = oldGrid[trimmedTop + i][j - addedLeft];
 					}
 				}
-				generateRegion(0, addedLeft + oldCols, newRows, newCols, grid);	
+				generateRegion(0, addedLeft + oldWidth, newHeight, newWidth, grid);	
 			}
 		} else {
-			int addedRows = newRows - oldRows;
-			int addedTop = addedRows / 2;
-			if (newCols < oldCols) {
-				int trimmedLeft = (oldCols - newCols) / 2;
-				generateRegion(0, 0, addedTop, newCols, grid);
-				for (int i = addedTop; i < addedTop + oldRows; i++) {
-					for (int j = 0; j < newCols; j++) {
+			int addedRows = newHeight - oldHeight;
+			int addedTop = addedRows / 2 + balanceRows(oldHeight, newHeight);
+			if (newWidth < oldWidth) {
+				int trimmedLeft = (oldWidth - newWidth) / 2 + balanceColumns(oldWidth, newWidth); 
+				generateRegion(0, 0, addedTop, newWidth, grid);
+				for (int i = addedTop; i < addedTop + oldHeight; i++) {
+					for (int j = 0; j < newWidth; j++) {
 						grid[i][j] = oldGrid[i - addedTop][j + trimmedLeft];
 					}
 				}				
-				generateRegion(addedTop + oldRows, 0, newRows, newCols, grid);
+				generateRegion(addedTop + oldHeight, 0, newHeight, newWidth, grid);
 			} else {
 				System.out.println("um.");
 			}
 		}
 		
 	}
+
+	/**
+	 * This deserves some explanation. 
+	 * When shrinking (growing) the visible area, either an odd or even number of columns must be removed (added). 
+	 * When odd, either the right or left will have one more column removed (added) than the other side.
+	 * Without alternating the sides, say always removing an even number from the left side, one side will always 
+	 * shrink in an unbalanced way (e.g. more are always removed from the right side).
+	 * When an odd number of columns are removed (added), this function alternates which side the extra comes from.
+	 * @param oldSize the old width or height
+	 * @param newSize the new width or height
+	 * @return 1 or 0, depending whether the extra should be removed from the left
+	 */
+	private boolean extraOnLeft = false;
+	private int balanceColumns(int oldSize, int newSize) {
+		if ((oldSize - newSize) % 2 != 0 ) {
+			if (extraOnLeft) {
+				extraOnLeft = false;
+				return 1;
+			}
+			extraOnLeft = true;
+		}
+		return 0; 
+	}
+	
+	/** See balanceColumns(). Unify them soon */
+	private boolean extraOnTop = false;
+	private int balanceRows(int oldSize, int newSize) {
+		if ((oldSize - newSize) % 2 != 0 ) {
+			if (extraOnTop) {
+				extraOnTop = false;
+				return 1;
+			}
+			extraOnTop = true;
+		}
+		return 0; 
+	}	
 	
 	/**
 	 * Creates a width x height matrix of ints, puts the origin at the center of the matrix, and fills
@@ -130,7 +170,8 @@ public class SurfaceFlattener extends PixelGridGenerator {
 	 */
 	private int[][] generateFreshGrid(int width, int height) {
 		int[][] grid = new int[height][width];
-		int lowerBoundWidth = -width / 2;
+		generateRegion(0, 0, height, width, grid);
+		/*int lowerBoundWidth = -width / 2;
 		int upperBoundWidth = width/2 + width%2;
 		int lowerBoundHeight = -height / 2;
 		int upperBoundHeight = height/2 + height%2;
@@ -140,8 +181,7 @@ public class SurfaceFlattener extends PixelGridGenerator {
 				int j = x - lowerBoundWidth;
 				grid[i][j] = function(x, y) ;
  			}
-		}	
-		oldGrid = grid;
+		}*/
 		return grid;
 	}
 	
@@ -155,10 +195,10 @@ public class SurfaceFlattener extends PixelGridGenerator {
 	 * @return the Z coordinate
 	 */
 	// can extend this to take a vector for n-dimensional points
-	private double yValue = 0;
+	private int yValue = 0;
 	private int function(int x, int y) {
 		setVariable("x", x);
-		if (y != (int)yValue) { // don't need to set y on every pixel
+		if (y != yValue) { // don't need to set y on every pixel
 			setVariable("y", (double)y);
 			yValue = y;
 		}
@@ -167,7 +207,7 @@ public class SurfaceFlattener extends PixelGridGenerator {
 		} catch (EvaluationException e) {
 			System.out.println("Error evaluating expression: " + e.getMessage());
 			System.exit(-1);
-			return -1; // never executed
+			return -1; // never reached
 		}
 	}
 
