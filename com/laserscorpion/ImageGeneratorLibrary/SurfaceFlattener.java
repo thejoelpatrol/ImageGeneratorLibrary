@@ -36,7 +36,7 @@ public class SurfaceFlattener extends PixelGridGenerator {
 		int[][] grid = new int[height][width];
 		if (oldGrid == null) {
 			generateRegion(0, 0, height, width, grid); // slow
-			oldOrigin = new Point(width, height);
+			oldOrigin = new Point(width/2, height/2);
 		} else {
 			Point newOrigin = new Point(width/2, height/2);
 			shrinkOrExpandOldGrid(newOrigin, grid); // faster		
