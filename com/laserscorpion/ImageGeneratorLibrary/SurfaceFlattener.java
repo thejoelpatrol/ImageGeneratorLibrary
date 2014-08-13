@@ -1,11 +1,13 @@
 package com.laserscorpion.ImageGeneratorLibrary;
 
 import uk.co.cogitolearning.cogpar.*;
+import java.awt.Point;
 
 public class SurfaceFlattener extends PixelGridGenerator {
 	String surfaceExpression;
 	ExpressionNode expressionTree;
 	int[][] oldGrid; 
+	Point oldOrigin;
 	
 	/**
 	 * The only constructor. Must supply the function to graph.
@@ -34,8 +36,11 @@ public class SurfaceFlattener extends PixelGridGenerator {
 		int[][] grid = new int[height][width];;
 		if (oldGrid == null) {
 			generateRegion(0, 0, height, width, grid); // slow
+			oldOrigin = new Point(grid[0].length/2, grid.length/2);
 		} else {
-			useOldGrid(grid); // faster			
+			Point newOrigin = new Point(width/2, height/2);
+			shrinkOrExpandOldGrid(newOrigin, grid); // faster		
+			oldOrigin = newOrigin;
 		}
 		oldGrid = grid;
 		return grid;
@@ -52,62 +57,83 @@ public class SurfaceFlattener extends PixelGridGenerator {
 		}
 	}
 	
-	private void useOldGrid(int[][] grid) {
+	private void shrinkOrExpandOldGrid(Point newOrigin, int[][] grid) {
 		int newHeight = grid.length;
 		int newWidth = grid[0].length;
 		int oldHeight = oldGrid.length;
 		int oldWidth = oldGrid[0].length;
-		if (newHeight <= oldHeight) {
-			int trimmedRows = oldHeight - newHeight;
-			int trimmedTop = trimmedRows / 2 + balanceRows(oldHeight, newHeight);
-			if (newWidth <= oldWidth) {
-				// subset existing image
-				int trimmedLeft = (oldWidth - newWidth) / 2 + balanceColumns(oldWidth, newWidth);
-				for (int i = 0; i < newHeight; i++) {
-					for (int j = 0; j < newWidth; j++) {
-						grid[i][j] = oldGrid[trimmedTop + i][trimmedLeft + j];
-					}
-				}
-			} else {
-				// problematic section
-				System.out.println("Problem 1");
-				int addedCols = newWidth - oldWidth;
-				int addedLeft = addedCols / 2 + balanceColumns(oldWidth, newWidth);
-				generateRegion(0, 0, newHeight, addedLeft, grid);
-				for (int i = 0; i < newHeight; i++) {
-					for (int j = addedLeft; j < addedLeft + oldWidth; j++) {
-						grid[i][j] = oldGrid[trimmedTop + i][j - addedLeft];
-					}
-				}
-				generateRegion(0, addedLeft + oldWidth, newHeight, newWidth, grid);	
+		
+		// "added" amounts can be negative, when the grid shrinks in one or more dimensions
+		int addedTop = newOrigin.y - oldOrigin.y;
+		int addedBottom = (newHeight - newOrigin.y) - (oldHeight - oldOrigin.y);
+		int addedLeft = newOrigin.x - oldOrigin.x; 
+		int addedRight = (newWidth - newOrigin.x) - (oldWidth - oldOrigin.x);
+		
+		int innerStartRow = Math.max(0, addedTop);
+		int innerStartCol = Math.max(0, addedLeft);
+		int innerEndRow = Math.min(newHeight, addedTop + oldHeight);
+		int innerEndCol = Math.min(newWidth, addedLeft + oldWidth);
+
+		if (addedTop > 0) generateRegion(0, 0, addedTop, newWidth, grid);
+		if (addedLeft > 0) generateRegion(innerStartRow, 0, innerEndRow, innerStartCol, grid);
+		
+		for (int i = innerStartRow; i < innerEndRow; i++) {
+			for (int j = innerStartCol; j < innerEndCol; j++) {
+				grid[i][j] = oldGrid[i - addedTop][j - addedLeft];
 			}
-		} else {
-			if (newWidth < oldWidth) {
-				// problematic section
-				System.out.println("Problem 2");
-				int addedRows = newHeight - oldHeight;
-				int addedTop = addedRows / 2 + balanceRows(oldHeight, newHeight);
-				int trimmedLeft = (oldWidth - newWidth) / 2 + balanceColumns(oldWidth, newWidth); 
-				generateRegion(0, 0, addedTop, newWidth, grid);
-				for (int i = addedTop; i < addedTop + oldHeight; i++) {
-					for (int j = 0; j < newWidth; j++) {
-						grid[i][j] = oldGrid[i - addedTop][j + trimmedLeft];
-					}
-				}				
-				generateRegion(addedTop + oldHeight, 0, newHeight, newWidth, grid);
-			} else {
-				expandOldGrid(grid);
+		}			
+		
+		if (addedRight > 0) generateRegion(innerStartRow, innerEndCol, innerEndRow, newWidth, grid);
+		if (addedBottom > 0) generateRegion(addedTop + oldHeight, 0, newHeight, newWidth, grid);
+
+
+		
+		oldOrigin = newOrigin;
+	}
+	
+	// this was an intermediate step in changing how the old grid is used
+	private void usePartialGrid(int newWidth, int newHeight, int oldWidth, int oldHeight, Point newOrigin, int[][] grid) {
+		// "added" amounts can be negative, when the grid shrinks in one or more dimensions
+		int addedTop = newOrigin.y - oldOrigin.y;
+		int addedBottom = (newHeight - newOrigin.y) - (oldHeight - oldOrigin.y);
+		int addedLeft = newOrigin.x - oldOrigin.x; 
+		int addedRight = (newWidth - newOrigin.x) - (oldWidth - oldOrigin.x);
+		
+		int innerStartRow = Math.max(0, addedTop);
+		int innerStartCol = Math.max(0, addedLeft);
+		int innerEndRow = Math.min(newHeight, addedTop + oldHeight);
+		int innerEndCol = Math.min(newWidth, addedLeft + oldWidth);
+
+		if (addedTop > 0) generateRegion(0, 0, addedTop, newWidth, grid);
+		if (addedLeft > 0) generateRegion(innerStartRow, 0, innerEndRow, innerStartCol, grid);
+		
+		for (int i = innerStartRow; i < innerEndRow; i++) {
+			for (int j = innerStartCol; j < innerEndCol; j++) {
+				grid[i][j] = oldGrid[i - addedTop][j - addedLeft];
 			}
-		}		
+		}			
+		
+		if (addedRight > 0) generateRegion(innerStartRow, innerEndCol, innerEndRow, newWidth, grid);
+		if (addedBottom > 0) generateRegion(addedTop + oldHeight, 0, newHeight, newWidth, grid);
+	}
+	
+	private void subsetOldGrid(int newWidth, int newHeight, Point newOrigin, int[][] grid) {
+		int trimmedTop = oldOrigin.y - newOrigin.y;
+		int trimmedLeft = oldOrigin.x - newOrigin.x;
+		for (int i = 0; i < newHeight; i++) {
+			for (int j = 0; j < newWidth; j++) {
+				grid[i][j] = oldGrid[trimmedTop + i][trimmedLeft + j];
+			}
+		}
 	}
 
-	private void expandOldGrid(int[][] grid) {
+	private void expandOldGrid(int[][] grid, Point newOrigin) {
 		int oldHeight = oldGrid.length;
 		int oldWidth = oldGrid[0].length;
 		int newHeight = grid.length;
 		int newWidth = grid[0].length;
-		int newRowsAbove = (newHeight - oldHeight) / 2 + balanceRows(oldHeight, newHeight);
-		int newColsLeft = (newWidth - oldWidth) / 2  + balanceColumns(oldWidth, newWidth); 
+		int newRowsAbove = newOrigin.y - oldOrigin.y;   
+		int newColsLeft = newOrigin.x - oldOrigin.x;
 		
 		generateRegion(0, 0, newRowsAbove, newWidth, grid);
 		generateRegion(newRowsAbove, 0, newRowsAbove + oldHeight, newWidth, grid);
@@ -124,44 +150,6 @@ public class SurfaceFlattener extends PixelGridGenerator {
 		}
 	}
 	
-	
-	/**
-	 * This deserves some explanation. It is necessary because we preserve some or all of the existing image when shrinking/expanding it.
-	 * When shrinking (expanding) the visible area, either an odd or even number of columns must be removed (added). 
-	 * When odd, either the right or left will have one more column removed (added) than the other side.
-	 * Without alternating the sides, say always removing an even number from the left side, one side will always 
-	 * shrink in an unbalanced way (e.g. more are always removed from the right side).
-	 * When an odd number of columns are removed (added), this function alternates which side the extra comes from.
-	 * @param oldSize the old width or height
-	 * @param newSize the new width or height
-	 * @return 1 or 0, depending whether the extra should be removed from the left
-	 */
-	private boolean extraOnLeft = false;
-	private int balanceColumns(int oldSize, int newSize) {
-		if ((oldSize - newSize) % 2 != 0 ) {
-			if (extraOnLeft) {
-				extraOnLeft = false;
-				return 1;
-			}
-			extraOnLeft = true;
-		}
-		return 0; 
-	}
-	
-	/** See balanceColumns(). Unify them soon */
-	private boolean extraOnTop = false;
-	private int balanceRows(int oldSize, int newSize) {
-		if ((oldSize - newSize) % 2 != 0 ) {
-			if (extraOnTop) {
-				extraOnTop = false;
-				return 1;
-			}
-			extraOnTop = true;
-		}
-		return 0; 
-	}	
-	
-
 	/**
 	 * Generates the Z value for an X and Y value, according to the function supplied to the constructor.
 	 * This calculates the actual function z(x,y) = ...
